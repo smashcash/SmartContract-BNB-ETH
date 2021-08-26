@@ -1,1 +1,1 @@
-# Binance-CHain
+# SmartContract-BNB-ETH
