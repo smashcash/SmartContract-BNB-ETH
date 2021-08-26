@@ -8,7 +8,7 @@ const fs = require('fs')
 const { toBN } = require('web3-utils')
 const { takeSnapshot, revertSnapshot } = require('../lib/ganacheHelper')
 
-const Tornado = artifacts.require('./ERC20Tornado.sol')
+const Smash = artifacts.require('./ERC20Smash.sol')
 const BadRecipient = artifacts.require('./BadRecipient.sol')
 const Token = artifacts.require('./ERC20Mock.sol')
 const USDTToken = artifacts.require('./IUSDT.sol')
@@ -38,8 +38,8 @@ function generateDeposit() {
   return deposit
 }
 
-contract('ERC20Tornado', accounts => {
-  let tornado
+contract('ERC20Smash', accounts => {
+  let Smash
   let token
   let usdtToken
   let badRecipient
@@ -64,7 +64,7 @@ contract('ERC20Tornado', accounts => {
       null,
       prefix,
     )
-    tornado = await Tornado.deployed()
+    Smash = await Smash.deployed()
     if (ERC20_TOKEN) {
       token = await Token.at(ERC20_TOKEN)
       usdtToken = await USDTToken.at(ERC20_TOKEN)
@@ -81,7 +81,7 @@ contract('ERC20Tornado', accounts => {
 
   describe('#constructor', () => {
     it('should initialize', async () => {
-      const tokenFromContract = await tornado.token()
+      const tokenFromContract = await Smash.token()
       tokenFromContract.should.be.equal(token.address)
     })
   })
@@ -89,9 +89,9 @@ contract('ERC20Tornado', accounts => {
   describe('#deposit', () => {
     it('should work', async () => {
       const commitment = toFixedHex(43)
-      await token.approve(tornado.address, tokenDenomination)
+      await token.approve(Smash.address, tokenDenomination)
 
-      let { logs } = await tornado.deposit(commitment, { from: sender })
+      let { logs } = await Smash.deposit(commitment, { from: sender })
 
       logs[0].event.should.be.equal('Deposit')
       logs[0].args.commitment.should.be.equal(commitment)
@@ -100,9 +100,9 @@ contract('ERC20Tornado', accounts => {
 
     it('should not allow to send ether on deposit', async () => {
       const commitment = toFixedHex(43)
-      await token.approve(tornado.address, tokenDenomination)
+      await token.approve(Smash.address, tokenDenomination)
 
-      let error = await tornado.deposit(commitment, { from: sender, value: 1e6 }).should.be.rejected
+      let error = await Smash.deposit(commitment, { from: sender, value: 1e6 }).should.be.rejected
       error.reason.should.be.equal('ETH value is supposed to be 0 for ERC20 instance')
     })
   })
@@ -115,11 +115,11 @@ contract('ERC20Tornado', accounts => {
       await token.mint(user, tokenDenomination)
 
       const balanceUserBefore = await token.balanceOf(user)
-      await token.approve(tornado.address, tokenDenomination, { from: user })
+      await token.approve(Smash.address, tokenDenomination, { from: user })
       // Uncomment to measure gas usage
-      // let gas = await tornado.deposit.estimateGas(toBN(deposit.commitment.toString()), { from: user, gasPrice: '0' })
+      // let gas = await Smash.deposit.estimateGas(toBN(deposit.commitment.toString()), { from: user, gasPrice: '0' })
       // console.log('deposit gas:', gas)
-      await tornado.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
+      await Smash.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
 
       const balanceUserAfter = await token.balanceOf(user)
       balanceUserAfter.should.be.eq.BN(toBN(balanceUserBefore).sub(toBN(tokenDenomination)))
@@ -146,17 +146,17 @@ contract('ERC20Tornado', accounts => {
       const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
       const { proof } = websnarkUtils.toSolidityInput(proofData)
 
-      const balanceTornadoBefore = await token.balanceOf(tornado.address)
+      const balanceSmashBefore = await token.balanceOf(Smash.address)
       const balanceRelayerBefore = await token.balanceOf(relayer)
       const balanceRecieverBefore = await token.balanceOf(toFixedHex(recipient, 20))
 
       const ethBalanceOperatorBefore = await web3.eth.getBalance(operator)
       const ethBalanceRecieverBefore = await web3.eth.getBalance(toFixedHex(recipient, 20))
       const ethBalanceRelayerBefore = await web3.eth.getBalance(relayer)
-      let isSpent = await tornado.isSpent(toFixedHex(input.nullifierHash))
+      let isSpent = await Smash.isSpent(toFixedHex(input.nullifierHash))
       isSpent.should.be.equal(false)
       // Uncomment to measure gas usage
-      // gas = await tornado.withdraw.estimateGas(proof, publicSignals, { from: relayer, gasPrice: '0' })
+      // gas = await Smash.withdraw.estimateGas(proof, publicSignals, { from: relayer, gasPrice: '0' })
       // console.log('withdraw gas:', gas)
       const args = [
         toFixedHex(input.root),
@@ -166,16 +166,16 @@ contract('ERC20Tornado', accounts => {
         toFixedHex(input.fee),
         toFixedHex(input.refund)
       ]
-      const { logs } = await tornado.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
+      const { logs } = await Smash.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
 
-      const balanceTornadoAfter = await token.balanceOf(tornado.address)
+      const balanceSmashAfter = await token.balanceOf(Smash.address)
       const balanceRelayerAfter = await token.balanceOf(relayer)
       const ethBalanceOperatorAfter = await web3.eth.getBalance(operator)
       const balanceRecieverAfter = await token.balanceOf(toFixedHex(recipient, 20))
       const ethBalanceRecieverAfter = await web3.eth.getBalance(toFixedHex(recipient, 20))
       const ethBalanceRelayerAfter = await web3.eth.getBalance(relayer)
       const feeBN = toBN(fee.toString())
-      balanceTornadoAfter.should.be.eq.BN(toBN(balanceTornadoBefore).sub(toBN(tokenDenomination)))
+      balanceSmashAfter.should.be.eq.BN(toBN(balanceSmashBefore).sub(toBN(tokenDenomination)))
       balanceRelayerAfter.should.be.eq.BN(toBN(balanceRelayerBefore).add(feeBN))
       balanceRecieverAfter.should.be.eq.BN(toBN(balanceRecieverBefore).add(toBN(tokenDenomination).sub(feeBN)))
 
@@ -187,7 +187,7 @@ contract('ERC20Tornado', accounts => {
       logs[0].args.nullifierHash.should.be.equal(toFixedHex(input.nullifierHash))
       logs[0].args.relayer.should.be.eq.BN(relayer)
       logs[0].args.fee.should.be.eq.BN(feeBN)
-      isSpent = await tornado.isSpent(toFixedHex(input.nullifierHash))
+      isSpent = await Smash.isSpent(toFixedHex(input.nullifierHash))
       isSpent.should.be.equal(true)
     })
 
@@ -199,8 +199,8 @@ contract('ERC20Tornado', accounts => {
       await token.mint(user, tokenDenomination)
 
       const balanceUserBefore = await token.balanceOf(user)
-      await token.approve(tornado.address, tokenDenomination, { from: user })
-      await tornado.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
+      await token.approve(Smash.address, tokenDenomination, { from: user })
+      await Smash.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
 
       const balanceUserAfter = await token.balanceOf(user)
       balanceUserAfter.should.be.eq.BN(toBN(balanceUserBefore).sub(toBN(tokenDenomination)))
@@ -227,14 +227,14 @@ contract('ERC20Tornado', accounts => {
       const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
       const { proof } = websnarkUtils.toSolidityInput(proofData)
 
-      const balanceTornadoBefore = await token.balanceOf(tornado.address)
+      const balanceSmashBefore = await token.balanceOf(Smash.address)
       const balanceRelayerBefore = await token.balanceOf(relayer)
       const balanceRecieverBefore = await token.balanceOf(toFixedHex(recipient, 20))
 
       const ethBalanceOperatorBefore = await web3.eth.getBalance(operator)
       const ethBalanceRecieverBefore = await web3.eth.getBalance(toFixedHex(recipient, 20))
       const ethBalanceRelayerBefore = await web3.eth.getBalance(relayer)
-      let isSpent = await tornado.isSpent(toFixedHex(input.nullifierHash))
+      let isSpent = await Smash.isSpent(toFixedHex(input.nullifierHash))
       isSpent.should.be.equal(false)
 
       const args = [
@@ -245,16 +245,16 @@ contract('ERC20Tornado', accounts => {
         toFixedHex(input.fee),
         toFixedHex(input.refund)
       ]
-      const { logs } = await tornado.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
+      const { logs } = await Smash.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
 
-      const balanceTornadoAfter = await token.balanceOf(tornado.address)
+      const balanceSmashAfter = await token.balanceOf(Smash.address)
       const balanceRelayerAfter = await token.balanceOf(relayer)
       const ethBalanceOperatorAfter = await web3.eth.getBalance(operator)
       const balanceRecieverAfter = await token.balanceOf(toFixedHex(recipient, 20))
       const ethBalanceRecieverAfter = await web3.eth.getBalance(toFixedHex(recipient, 20))
       const ethBalanceRelayerAfter = await web3.eth.getBalance(relayer)
       const feeBN = toBN(fee.toString())
-      balanceTornadoAfter.should.be.eq.BN(toBN(balanceTornadoBefore).sub(toBN(tokenDenomination)))
+      balanceSmashAfter.should.be.eq.BN(toBN(balanceSmashBefore).sub(toBN(tokenDenomination)))
       balanceRelayerAfter.should.be.eq.BN(toBN(balanceRelayerBefore).add(feeBN))
       balanceRecieverAfter.should.be.eq.BN(toBN(balanceRecieverBefore).add(toBN(tokenDenomination).sub(feeBN)))
 
@@ -266,7 +266,7 @@ contract('ERC20Tornado', accounts => {
       logs[0].args.nullifierHash.should.be.equal(toFixedHex(input.nullifierHash))
       logs[0].args.relayer.should.be.eq.BN(relayer)
       logs[0].args.fee.should.be.eq.BN(feeBN)
-      isSpent = await tornado.isSpent(toFixedHex(input.nullifierHash))
+      isSpent = await Smash.isSpent(toFixedHex(input.nullifierHash))
       isSpent.should.be.equal(true)
     })
 
@@ -275,8 +275,8 @@ contract('ERC20Tornado', accounts => {
       const user = accounts[4]
       await tree.insert(deposit.commitment)
       await token.mint(user, tokenDenomination)
-      await token.approve(tornado.address, tokenDenomination, { from: user })
-      await tornado.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
+      await token.approve(Smash.address, tokenDenomination, { from: user })
+      await Smash.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
 
 
       const { root, path_elements, path_index } = await tree.path(0)
@@ -309,11 +309,11 @@ contract('ERC20Tornado', accounts => {
         toFixedHex(input.fee),
         toFixedHex(input.refund)
       ]
-      let { reason } = await tornado.withdraw(proof, ...args, { value: 1, from: relayer, gasPrice: '0' }).should.be.rejected
+      let { reason } = await Smash.withdraw(proof, ...args, { value: 1, from: relayer, gasPrice: '0' }).should.be.rejected
       reason.should.be.equal('Incorrect refund amount received by the contract')
 
 
-      ;({ reason } = await tornado.withdraw(proof, ...args, { value: toBN(refund).mul(toBN(2)), from: relayer, gasPrice: '0' }).should.be.rejected)
+      ;({ reason } = await Smash.withdraw(proof, ...args, { value: toBN(refund).mul(toBN(2)), from: relayer, gasPrice: '0' }).should.be.rejected)
       reason.should.be.equal('Incorrect refund amount received by the contract')
     })
 
@@ -335,11 +335,11 @@ contract('ERC20Tornado', accounts => {
 
       const balanceUserBefore = await usdtToken.balanceOf(user)
       console.log('balanceUserBefore', balanceUserBefore.toString())
-      await usdtToken.approve(tornado.address, tokenDenomination, { from: user })
+      await usdtToken.approve(Smash.address, tokenDenomination, { from: user })
       console.log('approve done')
-      const allowanceUser = await usdtToken.allowance(user, tornado.address)
+      const allowanceUser = await usdtToken.allowance(user, Smash.address)
       console.log('allowanceUser', allowanceUser.toString())
-      await tornado.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
+      await Smash.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
       console.log('deposit done')
 
       const balanceUserAfter = await usdtToken.balanceOf(user)
@@ -368,16 +368,16 @@ contract('ERC20Tornado', accounts => {
       const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
       const { proof } = websnarkUtils.toSolidityInput(proofData)
 
-      const balanceTornadoBefore = await usdtToken.balanceOf(tornado.address)
+      const balanceSmashBefore = await usdtToken.balanceOf(Smash.address)
       const balanceRelayerBefore = await usdtToken.balanceOf(relayer)
       const ethBalanceOperatorBefore = await web3.eth.getBalance(operator)
       const balanceRecieverBefore = await usdtToken.balanceOf(toFixedHex(recipient, 20))
       const ethBalanceRecieverBefore = await web3.eth.getBalance(toFixedHex(recipient, 20))
-      let isSpent = await tornado.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
+      let isSpent = await Smash.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
       isSpent.should.be.equal(false)
 
       // Uncomment to measure gas usage
-      // gas = await tornado.withdraw.estimateGas(proof, publicSignals, { from: relayer, gasPrice: '0' })
+      // gas = await Smash.withdraw.estimateGas(proof, publicSignals, { from: relayer, gasPrice: '0' })
       // console.log('withdraw gas:', gas)
       const args = [
         toFixedHex(input.root),
@@ -387,15 +387,15 @@ contract('ERC20Tornado', accounts => {
         toFixedHex(input.fee),
         toFixedHex(input.refund)
       ]
-      const { logs } = await tornado.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
+      const { logs } = await Smash.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
 
-      const balanceTornadoAfter = await usdtToken.balanceOf(tornado.address)
+      const balanceSmashAfter = await usdtToken.balanceOf(Smash.address)
       const balanceRelayerAfter = await usdtToken.balanceOf(relayer)
       const ethBalanceOperatorAfter = await web3.eth.getBalance(operator)
       const balanceRecieverAfter = await usdtToken.balanceOf(toFixedHex(recipient, 20))
       const ethBalanceRecieverAfter = await web3.eth.getBalance(toFixedHex(recipient, 20))
       const feeBN = toBN(fee.toString())
-      balanceTornadoAfter.should.be.eq.BN(toBN(balanceTornadoBefore).sub(toBN(tokenDenomination)))
+      balanceSmashAfter.should.be.eq.BN(toBN(balanceSmashBefore).sub(toBN(tokenDenomination)))
       balanceRelayerAfter.should.be.eq.BN(toBN(balanceRelayerBefore))
       ethBalanceOperatorAfter.should.be.eq.BN(toBN(ethBalanceOperatorBefore).add(feeBN))
       balanceRecieverAfter.should.be.eq.BN(toBN(balanceRecieverBefore).add(toBN(tokenDenomination)))
@@ -406,7 +406,7 @@ contract('ERC20Tornado', accounts => {
       logs[0].args.nullifierHash.should.be.eq.BN(toBN(input.nullifierHash.toString()))
       logs[0].args.relayer.should.be.eq.BN(operator)
       logs[0].args.fee.should.be.eq.BN(feeBN)
-      isSpent = await tornado.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
+      isSpent = await Smash.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
       isSpent.should.be.equal(true)
     })
     it.skip('should work with REAL DAI', async () => {
@@ -426,9 +426,9 @@ contract('ERC20Tornado', accounts => {
 
       const balanceUserBefore = await token.balanceOf(user)
       console.log('balanceUserBefore', balanceUserBefore.toString())
-      await token.approve(tornado.address, tokenDenomination, { from: user })
+      await token.approve(Smash.address, tokenDenomination, { from: user })
       console.log('approve done')
-      await tornado.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
+      await Smash.deposit(toFixedHex(deposit.commitment), { from: user, gasPrice: '0' })
       console.log('deposit done')
 
       const balanceUserAfter = await token.balanceOf(user)
@@ -457,16 +457,16 @@ contract('ERC20Tornado', accounts => {
       const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
       const { proof } = websnarkUtils.toSolidityInput(proofData)
 
-      const balanceTornadoBefore = await token.balanceOf(tornado.address)
+      const balanceSmashBefore = await token.balanceOf(Smash.address)
       const balanceRelayerBefore = await token.balanceOf(relayer)
       const ethBalanceOperatorBefore = await web3.eth.getBalance(operator)
       const balanceRecieverBefore = await token.balanceOf(toFixedHex(recipient, 20))
       const ethBalanceRecieverBefore = await web3.eth.getBalance(toFixedHex(recipient, 20))
-      let isSpent = await tornado.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
+      let isSpent = await Smash.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
       isSpent.should.be.equal(false)
 
       // Uncomment to measure gas usage
-      // gas = await tornado.withdraw.estimateGas(proof, publicSignals, { from: relayer, gasPrice: '0' })
+      // gas = await Smash.withdraw.estimateGas(proof, publicSignals, { from: relayer, gasPrice: '0' })
       // console.log('withdraw gas:', gas)
       const args = [
         toFixedHex(input.root),
@@ -476,16 +476,16 @@ contract('ERC20Tornado', accounts => {
         toFixedHex(input.fee),
         toFixedHex(input.refund)
       ]
-      const { logs } = await tornado.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
+      const { logs } = await Smash.withdraw(proof, ...args, { value: refund, from: relayer, gasPrice: '0' })
       console.log('withdraw done')
 
-      const balanceTornadoAfter = await token.balanceOf(tornado.address)
+      const balanceSmashAfter = await token.balanceOf(Smash.address)
       const balanceRelayerAfter = await token.balanceOf(relayer)
       const ethBalanceOperatorAfter = await web3.eth.getBalance(operator)
       const balanceRecieverAfter = await token.balanceOf(toFixedHex(recipient, 20))
       const ethBalanceRecieverAfter = await web3.eth.getBalance(toFixedHex(recipient, 20))
       const feeBN = toBN(fee.toString())
-      balanceTornadoAfter.should.be.eq.BN(toBN(balanceTornadoBefore).sub(toBN(tokenDenomination)))
+      balanceSmashAfter.should.be.eq.BN(toBN(balanceSmashBefore).sub(toBN(tokenDenomination)))
       balanceRelayerAfter.should.be.eq.BN(toBN(balanceRelayerBefore))
       ethBalanceOperatorAfter.should.be.eq.BN(toBN(ethBalanceOperatorBefore).add(feeBN))
       balanceRecieverAfter.should.be.eq.BN(toBN(balanceRecieverBefore).add(toBN(tokenDenomination)))
@@ -496,7 +496,7 @@ contract('ERC20Tornado', accounts => {
       logs[0].args.nullifierHash.should.be.eq.BN(toBN(input.nullifierHash.toString()))
       logs[0].args.relayer.should.be.eq.BN(operator)
       logs[0].args.fee.should.be.eq.BN(feeBN)
-      isSpent = await tornado.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
+      isSpent = await Smash.isSpent(input.nullifierHash.toString(16).padStart(66, '0x00000'))
       isSpent.should.be.equal(true)
     })
   })

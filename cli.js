@@ -18,7 +18,7 @@ const { toWei, fromWei, toBN, BN } = require('web3-utils')
 const config = require('./config')
 const program = require('commander')
 
-let web3, tornado, circuit, proving_key, groth16, erc20, senderAccount, netId
+let web3, Smash, circuit, proving_key, groth16, erc20, senderAccount, netId
 let MERKLE_TREE_HEIGHT, ETH_AMOUNT, TOKEN_AMOUNT, PRIVATE_KEY
 
 /** Whether we are in a browser or node.js */
@@ -70,18 +70,18 @@ function createDeposit({ nullifier, secret }) {
 async function deposit({ currency, amount }) {
   const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
   const note = toHex(deposit.preimage, 62)
-  const noteString = `tornado-${currency}-${amount}-${netId}-${note}`
+  const noteString = `Smash-${currency}-${amount}-${netId}-${note}`
   console.log(`Your note: ${noteString}`)
   if (currency === 'eth') {
-    await printETHBalance({ address: tornado._address, name: 'Tornado' })
+    await printETHBalance({ address: Smash._address, name: 'Smash' })
     await printETHBalance({ address: senderAccount, name: 'Sender account' })
     const value = isLocalRPC ? ETH_AMOUNT : fromDecimals({ amount, decimals: 18 })
     console.log('Submitting deposit transaction')
-    await tornado.methods.deposit(toHex(deposit.commitment)).send({ value, from: senderAccount, gas: 2e6 })
-    await printETHBalance({ address: tornado._address, name: 'Tornado' })
+    await Smash.methods.deposit(toHex(deposit.commitment)).send({ value, from: senderAccount, gas: 2e6 })
+    await printETHBalance({ address: Smash._address, name: 'Smash' })
     await printETHBalance({ address: senderAccount, name: 'Sender account' })
   } else { // a token
-    await printERC20Balance({ address: tornado._address, name: 'Tornado' })
+    await printERC20Balance({ address: Smash._address, name: 'Smash' })
     await printERC20Balance({ address: senderAccount, name: 'Sender account' })
     const decimals = isLocalRPC ? 18 : config.deployments[`netId${netId}`][currency].decimals
     const tokenAmount = isLocalRPC ? TOKEN_AMOUNT : fromDecimals({ amount, decimals })
@@ -90,16 +90,16 @@ async function deposit({ currency, amount }) {
       await erc20.methods.mint(senderAccount, tokenAmount).send({ from: senderAccount, gas: 2e6 })
     }
 
-    const allowance = await erc20.methods.allowance(senderAccount, tornado._address).call({ from: senderAccount })
+    const allowance = await erc20.methods.allowance(senderAccount, Smash._address).call({ from: senderAccount })
     console.log('Current allowance is', fromWei(allowance))
     if (toBN(allowance).lt(toBN(tokenAmount))) {
       console.log('Approving tokens for deposit')
-      await erc20.methods.approve(tornado._address, tokenAmount).send({ from: senderAccount, gas: 1e6 })
+      await erc20.methods.approve(Smash._address, tokenAmount).send({ from: senderAccount, gas: 1e6 })
     }
 
     console.log('Submitting deposit transaction')
-    await tornado.methods.deposit(toHex(deposit.commitment)).send({ from: senderAccount, gas: 2e6 })
-    await printERC20Balance({ address: tornado._address, name: 'Tornado' })
+    await Smash.methods.deposit(toHex(deposit.commitment)).send({ from: senderAccount, gas: 2e6 })
+    await printERC20Balance({ address: Smash._address, name: 'Smash' })
     await printERC20Balance({ address: senderAccount, name: 'Sender account' })
   }
 
@@ -108,14 +108,14 @@ async function deposit({ currency, amount }) {
 
 /**
  * Generate merkle tree for a deposit.
- * Download deposit events from the tornado, reconstructs merkle tree, finds our deposit leaf
+ * Download deposit events from the Smash, reconstructs merkle tree, finds our deposit leaf
  * in it and generates merkle proof
  * @param deposit Deposit object
  */
 async function generateMerkleProof(deposit) {
   // Get all deposit events from smart contract and assemble merkle tree from them
-  console.log('Getting current state from tornado contract')
-  const events = await tornado.getPastEvents('Deposit', { fromBlock: 0, toBlock: 'latest' })
+  console.log('Getting current state from Smash contract')
+  const events = await Smash.getPastEvents('Deposit', { fromBlock: 0, toBlock: 'latest' })
   const leaves = events
     .sort((a, b) => a.returnValues.leafIndex - b.returnValues.leafIndex) // Sort events in chronological order
     .map(e => e.returnValues.commitment)
@@ -127,8 +127,8 @@ async function generateMerkleProof(deposit) {
 
   // Validate that our data is correct
   const root = await tree.root()
-  const isValidRoot = await tornado.methods.isKnownRoot(toHex(root)).call()
-  const isSpent = await tornado.methods.isSpent(toHex(deposit.nullifierHash)).call()
+  const isValidRoot = await Smash.methods.isKnownRoot(toHex(root)).call()
+  const isSpent = await Smash.methods.isSpent(toHex(deposit.nullifierHash)).call()
   assert(isValidRoot === true, 'Merkle tree is corrupted')
   assert(isSpent === false, 'The note is already spent')
   assert(leafIndex >= 0, 'The deposit is not found in the tree')
@@ -212,7 +212,7 @@ async function withdraw({ deposit, currency, amount, recipient, relayerURL, refu
 
     console.log('Sending withdraw transaction through relay')
     try {
-      const relay = await axios.post(relayerURL + '/relay', { contract: tornado._address, proof, args })
+      const relay = await axios.post(relayerURL + '/relay', { contract: Smash._address, proof, args })
       if (netId === 1 || netId === 42) {
         console.log(`Transaction submitted through the relay. View transaction on etherscan https://${getCurrentNetworkName()}etherscan.io/tx/${relay.data.txHash}`)
       } else {
@@ -232,7 +232,7 @@ async function withdraw({ deposit, currency, amount, recipient, relayerURL, refu
     const { proof, args } = await generateProof({ deposit, recipient, refund })
 
     console.log('Submitting withdraw transaction')
-    await tornado.methods.withdraw(proof, ...args).send({ from: senderAccount, value: refund.toString(), gas: 1e6 })
+    await Smash.methods.withdraw(proof, ...args).send({ from: senderAccount, value: refund.toString(), gas: 1e6 })
       .on('transactionHash', function (txHash) {
         if (netId === 1 || netId === 42) {
           console.log(`View transaction on etherscan https://${getCurrentNetworkName()}etherscan.io/tx/${txHash}`)
@@ -394,11 +394,11 @@ function waitForTxReceipt({ txHash, attempts = 60, delay = 1000 }) {
 }
 
 /**
- * Parses Tornado.cash note
+ * Parses Smash.cash note
  * @param noteString the note
  */
 function parseNote(noteString) {
-  const noteRegex = /tornado-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
+  const noteRegex = /Smash-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
   const match = noteRegex.exec(noteString)
   if (!match) {
     throw new Error('The note has invalid format')
@@ -415,7 +415,7 @@ function parseNote(noteString) {
 
 async function loadDepositData({ deposit }) {
   try {
-    const eventWhenHappened = await tornado.getPastEvents('Deposit', {
+    const eventWhenHappened = await Smash.getPastEvents('Deposit', {
       filter: {
         commitment: deposit.commitmentHex
       },
@@ -428,7 +428,7 @@ async function loadDepositData({ deposit }) {
 
     const { timestamp } = eventWhenHappened[0].returnValues
     const txHash = eventWhenHappened[0].transactionHash
-    const isSpent = await tornado.methods.isSpent(deposit.nullifierHex).call()
+    const isSpent = await Smash.methods.isSpent(deposit.nullifierHex).call()
     const receipt = await web3.eth.getTransactionReceipt(txHash)
 
     return { timestamp, txHash, isSpent, from: receipt.from, commitment: deposit.commitmentHex }
@@ -439,7 +439,7 @@ async function loadDepositData({ deposit }) {
 }
 async function loadWithdrawalData({ amount, currency, deposit }) {
   try {
-    const events = await await tornado.getPastEvents('Withdrawal', {
+    const events = await await Smash.getPastEvents('Withdrawal', {
       fromBlock: 0,
       toBlock: 'latest'
     })
@@ -471,7 +471,7 @@ async function loadWithdrawalData({ amount, currency, deposit }) {
  * Init web3, contracts, and snark
  */
 async function init({ rpc, noteNetId, currency = 'dai', amount = '100' }) {
-  let contractJson, erc20ContractJson, ETHSmashJson, tornadoAddress, tokenAddress
+  let contractJson, erc20ContractJson, ETHSmashJson, SmashAddress, tokenAddress
   // TODO do we need this? should it work in browser really?
   if (inBrowser) {
     // Initialize using injected web3 (Metamask)
@@ -514,22 +514,22 @@ async function init({ rpc, noteNetId, currency = 'dai', amount = '100' }) {
   isLocalRPC = netId > 42
 
   if (isLocalRPC) {
-    tornadoAddress = currency === 'eth' ? contractJson.networks[netId].address : ETHSmashJson.networks[netId].address
+    SmashAddress = currency === 'eth' ? contractJson.networks[netId].address : ETHSmashJson.networks[netId].address
     tokenAddress = currency !== 'eth' ? erc20ContractJson.networks[netId].address : null
     senderAccount = (await web3.eth.getAccounts())[0]
   } else {
     try {
-      tornadoAddress = config.deployments[`netId${netId}`][currency].instanceAddress[amount]
-      if (!tornadoAddress) {
+      SmashAddress = config.deployments[`netId${netId}`][currency].instanceAddress[amount]
+      if (!SmashAddress) {
         throw new Error()
       }
       tokenAddress = config.deployments[`netId${netId}`][currency].tokenAddress
     } catch (e) {
-      console.error('There is no such tornado instance, check the currency and amount you provide')
+      console.error('There is no such Smash instance, check the currency and amount you provide')
       process.exit(1)
     }
   }
-  tornado = new web3.eth.Contract(contractJson.abi, tornadoAddress)
+  Smash = new web3.eth.Contract(contractJson.abi, SmashAddress)
   erc20 = currency !== 'eth' ? new web3.eth.Contract(erc20ContractJson.abi, tokenAddress) : {}
 }
 
@@ -554,7 +554,7 @@ async function main() {
       .option('-R, --relayer <URL>', 'Withdraw via relayer')
     program
       .command('deposit <currency> <amount>')
-      .description('Submit a deposit of specified currency and amount from default eth account and return the resulting note. The currency is one of (ETH|DAI|cDAI|USDC|cUSDC|USDT). The amount depends on currency, see config.js file or visit https://tornado.cash.')
+      .description('Submit a deposit of specified currency and amount from default eth account and return the resulting note. The currency is one of (ETH|DAI|cDAI|USDC|cUSDC|USDT). The amount depends on currency, see config.js file or visit https://Smash.cash.')
       .action(async (currency, amount) => {
         currency = currency.toLowerCase()
         await init({ rpc: program.rpc, currency, amount })

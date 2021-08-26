@@ -45,7 +45,7 @@ async function deposit() {
   console.log('Sending deposit transaction...')
   const tx = await contract.methods.deposit(toHex(deposit.commitment)).send({ value: toWei(AMOUNT), from: web3.eth.defaultAccount, gas:2e6 })
   console.log(`https://kovan.etherscan.io/tx/${tx.transactionHash}`)
-  return `tornado-eth-${AMOUNT}-${netId}-${toHex(deposit.preimage, 62)}`
+  return `Smash-eth-${AMOUNT}-${netId}-${toHex(deposit.preimage, 62)}`
 }
 
 /**
@@ -62,11 +62,11 @@ async function withdraw(note, recipient) {
 }
 
 /**
- * Parses Tornado.cash note
+ * Parses Smash.cash note
  * @param noteString the note
  */
 function parseNote(noteString) {
-  const noteRegex = /tornado-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
+  const noteRegex = /Smash-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
   const match = noteRegex.exec(noteString)
 
   // we are ignoring `currency`, `amount`, and `netId` for this minimal example
