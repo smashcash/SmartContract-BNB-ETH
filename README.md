@@ -1,4 +1,3 @@
-<<<<<<< HEAD >>>>>>>>>>
 # Smash Cash 
 
 Smash Cash is a non-custodial Ethereum and ERC20 privacy solution based on zkSNARKs. It improves transaction privacy by breaking the on-chain link between the recipient and destination addresses. It uses a smart contract that accepts ETH deposits that can be withdrawn by a different address. Whenever ETH is withdrawn by the new address, there is no way to link the withdrawal to the deposit, ensuring complete privacy.
@@ -126,6 +125,4 @@ zkutil export-keys -c build/circuits/withdraw.json -p build/circuits/withdraw.pa
 zkutil generate-verifier -p build/circuits/withdraw.params -v build/circuits/Verifier.sol
 sed -i -e 's/pragma solidity \^0.6.0/pragma solidity 0.5.17/g' ./build/circuits/Verifier.sol
 ```
-=======
-# SmartContract-BNB-ETH
->>>>>>> 80f8f5743f0643e182de5546f59dc03fe792d9a0
+
