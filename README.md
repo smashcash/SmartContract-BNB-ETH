@@ -1,12 +1,13 @@
+<<<<<<< HEAD
 # Tornado Cash Privacy Solution [![Build Status](https://travis-ci.org/tornadocash/tornado-core.svg?branch=master)](https://travis-ci.org/tornadocash/tornado-core)
 
-Tornado Cash is a non-custodial Ethereum and ERC20 privacy solution based on zkSNARKs. It improves transaction privacy by breaking the on-chain link between the recipient and destination addresses. It uses a smart contract that accepts ETH deposits that can be withdrawn by a different address. Whenever ETH is withdrawn by the new address, there is no way to link the withdrawal to the deposit, ensuring complete privacy.
+Smash Cash is a non-custodial Ethereum and ERC20 privacy solution based on zkSNARKs. It improves transaction privacy by breaking the on-chain link between the recipient and destination addresses. It uses a smart contract that accepts ETH deposits that can be withdrawn by a different address. Whenever ETH is withdrawn by the new address, there is no way to link the withdrawal to the deposit, ensuring complete privacy.
 
-To make a deposit user generates a secret and sends its hash (called a commitment) along with the deposit amount to the Tornado smart contract. The contract accepts the deposit and adds the commitment to its list of deposits.
+To make a deposit user generates a secret and sends its hash (called a commitment) along with the deposit amount to the Smash smart contract. The contract accepts the deposit and adds the commitment to its list of deposits.
 
 Later, the user decides to make a withdrawal. To do that, the user should provide a proof that he or she possesses a secret to an unspent commitment from the smart contract’s list of deposits. zkSnark technology allows that to happen without revealing which exact deposit corresponds to this secret. The smart contract will check the proof, and transfer deposited funds to the address specified for withdrawal. An external observer will be unable to determine which deposit this withdrawal came from.
 
-You can read more about it in [this medium article](https://medium.com/@tornado.cash/introducing-private-transactions-on-ethereum-now-42ee915babe0)
+You can read more about it in [this medium article](https://medium.com/@Smash.cash/introducing-private-transactions-on-ethereum-now-42ee915babe0)
 
 ## Specs
 
@@ -17,22 +18,6 @@ You can read more about it in [this medium article](https://medium.com/@tornado.
 - Serverless
 
 ![image](docs/diagram.png)
-
-## Whitepaper
-
-**[TornadoCash_whitepaper_v1.4.pdf](https://tornado.cash/audits/TornadoCash_whitepaper_v1.4.pdf)**
-
-## Was it audited?
-
-Tornado.cash protocols, circuits, and smart contracts were audited by a group of experts from [ABDK Consulting](https://www.abdk.consulting), specializing in zero-knowledge, cryptography, and smart contracts.
-
-During the audit, no critical issues were found and all outstanding issues were fixed. The results can be found here:
-
-- Cryptographic review https://tornado.cash/audits/TornadoCash_cryptographic_review_ABDK.pdf
-- Smart contract audit https://tornado.cash/audits/TornadoCash_contract_audit_ABDK.pdf
-- Zk-SNARK circuits audit https://tornado.cash/audits/TornadoCash_circuit_audit_ABDK.pdf
-
-Underlying circomlib dependency is currently being audited, and the team already published most of the fixes for found issues
 
 ## Requirements
 
@@ -74,28 +59,16 @@ Use the command-line version. Works for Ganache, Kovan, and Mainnet:
 
 ### Kovan, Mainnet
 
-1. Please use https://github.com/tornadocash/tornado-cli
-   Reason: because tornado-core uses websnark `2041cfa5fa0b71cd5cca9022a4eeea4afe28c9f7` commit hash in order to work with local trusted setup. Tornado-cli uses `4c0af6a8b65aabea3c09f377f63c44e7a58afa6d` commit with production trusted setup of tornadoCash
-
+1. Please use https://github.com/smashcash/SmartContract-BNB-ETH
 Example:
 
 ```bash
 ./cli.js deposit ETH 0.1 --rpc https://kovan.infura.io/v3/27a9649f826b4e31a83e07ae09a87448
 ```
-
-> Your note: tornado-eth-0.1-42-0xf73dd6833ccbcc046c44228c8e2aa312bf49e08389dadc7c65e6a73239867b7ef49c705c4db227e2fadd8489a494b6880bdcb6016047e019d1abec1c7652
-> Tornado ETH balance is 8.9
-> Sender account ETH balance is 1004873.470619891361352542
-> Submitting deposit transaction
-> Tornado ETH balance is 9
-> Sender account ETH balance is 1004873.361652048361352542
-
-```bash
-./cli.js withdraw tornado-eth-0.1-42-0xf73dd6833ccbcc046c44228c8e2aa312bf49e08389dadc7c65e6a73239867b7ef49c705c4db227e2fadd8489a494b6880bdcb6016047e019d1abec1c7652 0x8589427373D6D84E98730D7795D8f6f8731FDA16 --rpc https://kovan.infura.io/v3/27a9649f826b4e31a83e07ae09a87448 --relayer https://kovan-frelay.duckdns.org
 ```
 
 > Relay address: 0x6A31736e7490AbE5D5676be059DFf064AB4aC754
-> Getting current state from tornado contract
+> Getting current state from Smash contract
 > Generating SNARK proof
 > Proof time: 9117.051ms
 > Sending withdraw transaction through the relay
@@ -103,13 +76,13 @@ Example:
 > Transaction mined in block 17036120
 > Done
 
-## Deploy ETH Tornado Cash
+## Deploy ETH Smash Cash
 
 1. `cp .env.example .env`
 1. Tune all necessary params
 1. `npx truffle migrate --network kovan --reset --f 2 --to 4`
 
-## Deploy ERC20 Tornado Cash
+## Deploy ERC20 Smash Cash
 
 1. `cp .env.example .env`
 1. Tune all necessary params
@@ -153,3 +126,6 @@ zkutil export-keys -c build/circuits/withdraw.json -p build/circuits/withdraw.pa
 zkutil generate-verifier -p build/circuits/withdraw.params -v build/circuits/Verifier.sol
 sed -i -e 's/pragma solidity \^0.6.0/pragma solidity 0.5.17/g' ./build/circuits/Verifier.sol
 ```
+=======
+# SmartContract-BNB-ETH
+>>>>>>> 80f8f5743f0643e182de5546f59dc03fe792d9a0
