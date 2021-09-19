@@ -1,12 +1,12 @@
-# Smash Cash 
+# Smash Avax 
 
-Smash Cash is a non-custodial Ethereum and ERC20 privacy solution based on zkSNARKs. It improves transaction privacy by breaking the on-chain link between the recipient and destination addresses. It uses a smart contract that accepts ETH deposits that can be withdrawn by a different address. Whenever ETH is withdrawn by the new address, there is no way to link the withdrawal to the deposit, ensuring complete privacy.
+Smash Avax is a non-custodial Ethereum and ERC20 privacy solution based on zkSNARKs. It improves transaction privacy by breaking the on-chain link between the recipient and destination addresses. It uses a smart contract that accepts ETH deposits that can be withdrawn by a different address. Whenever ETH is withdrawn by the new address, there is no way to link the withdrawal to the deposit, ensuring complete privacy.
 
 To make a deposit user generates a secret and sends its hash (called a commitment) along with the deposit amount to the Smash smart contract. The contract accepts the deposit and adds the commitment to its list of deposits.
 
 Later, the user decides to make a withdrawal. To do that, the user should provide a proof that he or she possesses a secret to an unspent commitment from the smart contract’s list of deposits. zkSnark technology allows that to happen without revealing which exact deposit corresponds to this secret. The smart contract will check the proof, and transfer deposited funds to the address specified for withdrawal. An external observer will be unable to determine which deposit this withdrawal came from.
 
-You can read more about it in [this medium article](https://medium.com/@Smash.cash/introducing-private-transactions-on-ethereum-now-42ee915babe0)
+You can read more about it in [this medium article](https://medium.com/@Smash.avax/introducing-private-transactions-on-ethereum-now-42ee915babe0)
 
 ## Specs
 
@@ -58,7 +58,7 @@ Use the command-line version. Works for Ganache, Kovan, and Mainnet:
 
 ### Kovan, Mainnet
 
-1. Please use https://github.com/smashcash/SmartContract-BNB-ETH
+1. Please use https://github.com/smashAvax/SmartContract-BNB-ETH
 Example:
 
 ```bash
@@ -75,13 +75,13 @@ Example:
 > Transaction mined in block 17036120
 > Done
 
-## Deploy ETH Smash Cash
+## Deploy ETH Smash Avax
 
 1. `cp .env.example .env`
 1. Tune all necessary params
 1. `npx truffle migrate --network kovan --reset --f 2 --to 4`
 
-## Deploy ERC20 Smash Cash
+## Deploy ERC20 Smash Avax
 
 1. `cp .env.example .env`
 1. Tune all necessary params
@@ -124,5 +124,3 @@ zkutil setup -c build/circuits/withdraw.json -p build/circuits/withdraw.params
 zkutil export-keys -c build/circuits/withdraw.json -p build/circuits/withdraw.params -r build/circuits/withdraw_proving_key.json -v build/circuits/withdraw_verification_key.json
 zkutil generate-verifier -p build/circuits/withdraw.params -v build/circuits/Verifier.sol
 sed -i -e 's/pragma solidity \^0.6.0/pragma solidity 0.5.17/g' ./build/circuits/Verifier.sol
-```
-
